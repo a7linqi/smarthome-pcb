@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "name": "STM32F103 Keil ARMCC5",
+      "includePath": [
+        "${workspaceFolder}/Core/Inc",
+        "${workspaceFolder}/BSP/Inc",
+        "${workspaceFolder}/App/Inc",
+        "${workspaceFolder}/Drivers/STM32F1xx_HAL_Driver/Inc",
+        "${workspaceFolder}/Drivers/STM32F1xx_HAL_Driver/Inc/Legacy",
+        "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32F1xx/Include",
+        "${workspaceFolder}/Drivers/CMSIS/Include",
+        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
+        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS",
+        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3"
+      ],
+      "defines": ["USE_HAL_DRIVER", "STM32F103xB"],
+      "compilerPath": "D:/Keil/Keil5/ARM/ARMCC/bin/armcc.exe",
+      "cStandard": "c99",
+      "intelliSenseMode": "windows-gcc-arm"
+    }
+  ],
+  "version": 4
+}

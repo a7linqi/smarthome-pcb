@@ -1,0 +1,6 @@
+config load "F:/Smart/stm32/SmartHome.ioc"
+project name SmartHome
+project toolchain "MDK-ARM V5"
+project path "F:/Smart/stm32"
+project generate
+exit

@@ -1,34 +1,28 @@
-# ===== Keil MDK 构建产物 =====
-MDK-ARM/DebugConfig/
-MDK-ARM/Listings/
-MDK-ARM/Objects/
-MDK-ARM/RTE/
-MDK-ARM/*.uvguix.*
-MDK-ARM/*.uvoptx
-MDK-ARM/*.uvprojx.bak
-MDK-ARM/JLinkLog.txt
-*.o
-*.d
-*.crf
-*.axf
-*.hex
-*.bin
-*.map
-*.lst
-*.dep
-*.bak
+# Keil generated output and per-user state
+**/MDK-ARM/*/
+**/*.uvguix.*
+**/*.uvoptx
+**/*.build_log.htm
+**/*.htm
+**/*.lnp
+**/*.axf
+**/*.hex
+**/*.bin
+**/*.map
+**/*.lst
+**/*.o
+**/*.d
+**/*.crf
+**/build.log
 
-# ===== VS Code =====
-.vscode/
-*.code-workspace
+# CubeMX temporary files
+**/MXTmpFiles/
+**/*_save
 
-# ===== ESP32 构建产物 =====
-Esp32/SmartHome_ESP32/build/
-Esp32/SmartHome_ESP32/sdkconfig.old
-Esp32/SmartHome_ESP32/managed_components/
-Esp32/SmartHome_ESP32/dependencies.lock
+# Editors and OS
+**/.history/
+**/.DS_Store
+**/Thumbs.db
 
-# ===== 系统文件 =====
-Thumbs.db
-Desktop.ini
-.DS_Store
+# Keep the shared VS Code configuration, ignore local state
+**/.vscode/*.log

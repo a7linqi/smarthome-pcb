@@ -1,0 +1,20 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Keil: Build SmartHome",
+      "type": "process",
+      "command": "D:/Keil/Keil5/UV4/UV4.exe",
+      "args": ["-b", "F:/Smart/stm32/SmartHome/MDK-ARM/SmartHome.uvprojx", "-j0", "-o", "F:/Smart/stm32/SmartHome/MDK-ARM/build.log"],
+      "problemMatcher": [],
+      "group": {"kind": "build", "isDefault": true}
+    },
+    {
+      "label": "Keil: Rebuild SmartHome",
+      "type": "process",
+      "command": "D:/Keil/Keil5/UV4/UV4.exe",
+      "args": ["-r", "F:/Smart/stm32/SmartHome/MDK-ARM/SmartHome.uvprojx", "-j0", "-o", "F:/Smart/stm32/SmartHome/MDK-ARM/build.log"],
+      "problemMatcher": []
+    }
+  ]
+}
