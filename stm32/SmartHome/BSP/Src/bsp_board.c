@@ -11,6 +11,7 @@ static const key_gpio_t keys[BSP_KEY_COUNT] = {
     {KEY_2_GPIO_Port, KEY_2_Pin}, {KEY_0_GPIO_Port, KEY_0_Pin}
 };
 
+/* 板级初始化：延时、关闭灯和蜂鸣器、启动 ADC 和串口 */
 bsp_status_t BSP_Board_Init(void)
 {
     BSP_Delay_Init();
@@ -21,16 +22,23 @@ bsp_status_t BSP_Board_Init(void)
     return BSP_OK;
 }
 
+/* 控制 LED 灯亮灭（低电平有效） */
 void BSP_Light_Set(bool on) { HAL_GPIO_WritePin(LIGHT_LED_GPIO_Port, LIGHT_LED_Pin, on ? GPIO_PIN_RESET : GPIO_PIN_SET); }
+
+/* 读取 LED 当前状态 */
 bool BSP_Light_Get(void) { return HAL_GPIO_ReadPin(LIGHT_LED_GPIO_Port, LIGHT_LED_Pin) == GPIO_PIN_RESET; }
+
+/* 控制蜂鸣器响/停（高电平有效） */
 void BSP_Buzzer_Set(bool on) { HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, on ? GPIO_PIN_SET : GPIO_PIN_RESET); }
 
+/* 检测单个按键是否按下（低电平有效） */
 bool BSP_Key_IsPressed(bsp_key_t key)
 {
     if (key >= BSP_KEY_COUNT) return false;
     return HAL_GPIO_ReadPin(keys[key].port, keys[key].pin) == GPIO_PIN_RESET;
 }
 
+/* 一次性读取所有按键状态，返回位掩码（bit0=KEY_UP, bit1=KEY_1 ...） */
 uint32_t BSP_Key_GetPressedMask(void)
 {
     uint32_t mask = 0;

@@ -1,4 +1,5 @@
 #include "bsp_oled.h"
+#include "bsp_oled_font.h"
 #include "bsp_delay.h"
 #include "main.h"
 #include <string.h>
@@ -18,5 +19,67 @@ bsp_status_t BSP_OLED_Init(void)
 }
 void BSP_OLED_Clear(void) { memset(fb,0,sizeof fb); }
 void BSP_OLED_SetPixel(uint8_t x,uint8_t y,uint8_t on) { if(x>=128||y>=64)return; if(on)fb[x+(y>>3)*128]|=1U<<(y&7); else fb[x+(y>>3)*128]&=~(1U<<(y&7)); }
+
+void BSP_OLED_ShowChar(uint8_t x, uint8_t y, char character)
+{
+    uint8_t column;
+    uint8_t row;
+    uint8_t glyph_index;
+
+    if ((uint8_t)character < (uint8_t)' ' || (uint8_t)character > (uint8_t)'~') {
+        character = '?';
+    }
+    glyph_index = (uint8_t)character - (uint8_t)' ';
+
+    for (column = 0U; column < 8U; ++column) {
+        uint16_t column_bits = (uint16_t)OLED_F8x16[glyph_index][column]
+                             | ((uint16_t)OLED_F8x16[glyph_index][column + 8U] << 8U);
+        for (row = 0U; row < 16U; ++row) {
+            BSP_OLED_SetPixel((uint8_t)(x + column), (uint8_t)(y + row),
+                              (uint8_t)((column_bits >> row) & 1U));
+        }
+    }
+}
+
+void BSP_OLED_ShowString(uint8_t x, uint8_t y, const char *string)
+{
+    if (string == 0) return;
+    while (*string != '\0' && x <= (BSP_OLED_WIDTH - 8U)) {
+        BSP_OLED_ShowChar(x, y, *string++);
+        x = (uint8_t)(x + 8U);
+    }
+}
+
+static uint32_t pow10_u32(uint8_t exponent)
+{
+    uint32_t result = 1U;
+    while (exponent-- != 0U) result *= 10U;
+    return result;
+}
+
+void BSP_OLED_ShowNum(uint8_t x, uint8_t y, uint32_t number, uint8_t length)
+{
+    uint8_t index;
+    if (length == 0U || length > 10U) return;
+    for (index = 0U; index < length; ++index) {
+        uint32_t divisor = pow10_u32((uint8_t)(length - index - 1U));
+        BSP_OLED_ShowChar((uint8_t)(x + index * 8U), y,
+                          (char)('0' + (number / divisor) % 10U));
+    }
+}
+
+void BSP_OLED_ShowSignedNum(uint8_t x, uint8_t y, int32_t number, uint8_t length)
+{
+    uint32_t magnitude;
+    if (number < 0) {
+        BSP_OLED_ShowChar(x, y, '-');
+        magnitude = (uint32_t)(-(number + 1)) + 1U;
+    } else {
+        BSP_OLED_ShowChar(x, y, '+');
+        magnitude = (uint32_t)number;
+    }
+    BSP_OLED_ShowNum((uint8_t)(x + 8U), y, magnitude, length);
+}
+
 bsp_status_t BSP_OLED_Refresh(void) { for(uint8_t p=0;p<8;p++){ cmd(0xB0+p); cmd(0x00); cmd(0x10); write(0x40,&fb[p*128],128); } return BSP_OK; }
 uint8_t *BSP_OLED_GetBuffer(void) { return fb; }

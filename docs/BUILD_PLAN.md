@@ -35,14 +35,14 @@
 | ControlTask | 自动/手动控制与阈值判断 | 50 ms |
 | DisplayTask | OLED 页面刷新 | 200 ms |
 | AlarmTask | 蜂鸣器报警状态机 | 50 ms |
-| UartTask | 与 ESP32-S3 收发数据帧 | 事件驱动 |
+| UartTask | 与 ESP8266 收发数据帧 | 事件驱动 |
 
 共享传感器快照由互斥锁保护；按键使用 EXTI + 二值信号量；UART 接收使用
 中断/环形缓冲区，不在中断中解析协议。
 
-## 阶段 3：ESP32-S3 与 MQTT
+## 阶段 3：ESP8266 与 MQTT
 
-- ESP-IDF 建立 Wi-Fi station 和自动重连。
+- ESP8266 Arduino Core 建立 Wi-Fi station 和自动重连。
 - UART 接收 STM32 状态帧并校验。
 - MQTT 上报传感器和设备状态。
 - MQTT 控制命令转换为 UART 控制帧。
@@ -63,4 +63,4 @@
 4. 读取芯片 ID 并全片擦除前先备份现有固件（若需要保留卖家程序）。
 5. 用最小 LED/USART 程序验证下载和运行。
 
-注意：板载 ESP8266 和外接 ESP32-S3 不应同时驱动同一组 STM32 UART 引脚。
+注意：烧录 ESP8266 时，USB-TTL TX 和 STM32 TX 不应同时驱动 ESP8266 RX。

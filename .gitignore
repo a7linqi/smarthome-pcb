@@ -26,3 +26,8 @@
 
 # Keep the shared VS Code configuration, ignore local state
 **/.vscode/*.log
+
+# Local Wi-Fi credentials
+esp8266/WiFiConnect/wifi_config.h
+esp8266/SmartHomeBridge/bridge_config.h
+esp8266/build-*/

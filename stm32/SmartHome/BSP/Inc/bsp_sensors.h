@@ -11,15 +11,15 @@ enum {
 };
 
 typedef struct {
-    uint32_t timestamp_ms;
-    uint32_t valid_mask;
-    int16_t temperature_centi_c;
-    uint16_t humidity_centi_pct;
-    uint32_t pressure_pa;
-    uint16_t light_raw;
-    uint16_t mq2_raw;
-    uint16_t mq7_raw;
-    uint16_t mq135_raw;
+    uint32_t timestamp_ms;          /* 采样时刻，HAL_GetTick() 毫秒 */
+    uint32_t valid_mask;            /* 哪些传感器本次读取成功，BSP_SENSOR_VALID_xxx 位或 */
+    int16_t  temperature_centi_c;   /* 温度，单位 0.01°C（DHT11 或 BMP280 备用） */
+    uint16_t humidity_centi_pct;    /* 湿度，单位 0.01%RH（仅 DHT11） */
+    uint32_t pressure_pa;           /* 大气压，单位 Pa（仅 BMP280） */
+    uint16_t light_raw;             /* 光敏电阻 ADC 原始值，0~4095 */
+    uint16_t mq2_raw;               /* MQ-2 烟雾/可燃气体 ADC 原始值 */
+    uint16_t mq7_raw;               /* MQ-7 一氧化碳 ADC 原始值 */
+    uint16_t mq135_raw;             /* MQ-135 空气质量 ADC 原始值 */
 } bsp_sensor_snapshot_t;
 
 bsp_status_t BSP_Sensors_Init(void);

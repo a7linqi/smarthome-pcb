@@ -21,3 +21,15 @@ uint32_t BSP_Keys_Scan10ms(void)
     }
     return events;
 }
+
+uint8_t BSP_Key_Scan(void)
+{
+    uint32_t events = BSP_Keys_Scan10ms();
+
+    if (events & (1UL << BSP_KEY_1))  return 1U;
+    if (events & (1UL << BSP_KEY_2))  return 2U;
+    if (events & (1UL << BSP_KEY_0))  return 3U;
+    if (events & (1UL << BSP_KEY_UP)) return 4U;
+
+    return 0U;
+}

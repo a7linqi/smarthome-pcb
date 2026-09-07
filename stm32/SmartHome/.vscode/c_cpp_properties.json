@@ -17,7 +17,7 @@
       "defines": ["USE_HAL_DRIVER", "STM32F103xB"],
       "compilerPath": "D:/Keil/Keil5/ARM/ARMCC/bin/armcc.exe",
       "cStandard": "c99",
-      "intelliSenseMode": "windows-gcc-arm"
+      "intelliSenseMode": "windows-msvc-arm"
     }
   ],
   "version": 4

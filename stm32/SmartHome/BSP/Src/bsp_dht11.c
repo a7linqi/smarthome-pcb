@@ -2,6 +2,7 @@
 #include "bsp_delay.h"
 #include "main.h"
 
+/* 切换 DATA 引脚输入/输出模式 */
 static void dq_mode(uint32_t mode)
 {
     GPIO_InitTypeDef gpio = {0};
@@ -9,6 +10,7 @@ static void dq_mode(uint32_t mode)
     HAL_GPIO_Init(DHT11_DATA_GPIO_Port, &gpio);
 }
 
+/* 等待 DATA 引脚到达指定电平，超时返回错误 */
 static bsp_status_t wait_level(GPIO_PinState level, uint32_t timeout_us)
 {
     while (HAL_GPIO_ReadPin(DHT11_DATA_GPIO_Port, DHT11_DATA_Pin) != level) {
@@ -18,6 +20,7 @@ static bsp_status_t wait_level(GPIO_PinState level, uint32_t timeout_us)
     return BSP_OK;
 }
 
+/* 从 DATA 引脚读取一个字节（DHT11 协议：高电平 26-28us=0, 70us=1） */
 static bsp_status_t read_byte(uint8_t *value)
 {
     uint8_t out = 0;
@@ -30,15 +33,24 @@ static bsp_status_t read_byte(uint8_t *value)
     *value = out; return BSP_OK;
 }
 
+/* DHT11 完整读取流程：主机发起起始信号 → 等应答 → 读 5 字节 → 校验 */
 bsp_status_t BSP_DHT11_Read(bsp_dht11_data_t *data)
 {
     uint8_t b[5];
     if (!data) return BSP_INVALID_ARG;
-    dq_mode(GPIO_MODE_OUTPUT_OD); HAL_GPIO_WritePin(DHT11_DATA_GPIO_Port, DHT11_DATA_Pin, GPIO_PIN_RESET);
-    HAL_Delay(20); HAL_GPIO_WritePin(DHT11_DATA_GPIO_Port, DHT11_DATA_Pin, GPIO_PIN_SET); BSP_DelayUs(30);
+    dq_mode(GPIO_MODE_OUTPUT_OD);
+    HAL_GPIO_WritePin(DHT11_DATA_GPIO_Port, DHT11_DATA_Pin, GPIO_PIN_RESET);
+    HAL_Delay(20); 
+    HAL_GPIO_WritePin(DHT11_DATA_GPIO_Port, DHT11_DATA_Pin, GPIO_PIN_SET); BSP_DelayUs(30);
     dq_mode(GPIO_MODE_INPUT);
-    if (wait_level(GPIO_PIN_RESET, 100) != BSP_OK || wait_level(GPIO_PIN_SET, 100) != BSP_OK || wait_level(GPIO_PIN_RESET, 100) != BSP_OK) return BSP_TIMEOUT;
-    for (uint8_t i = 0; i < 5; ++i) if (read_byte(&b[i]) != BSP_OK) return BSP_TIMEOUT;
-    if ((uint8_t)(b[0] + b[1] + b[2] + b[3]) != b[4]) return BSP_ERROR;
-    data->humidity_pct = b[0]; data->temperature_c = b[2]; return BSP_OK;
+    if (wait_level(GPIO_PIN_RESET, 100) != BSP_OK || wait_level(GPIO_PIN_SET, 100) != BSP_OK || wait_level(GPIO_PIN_RESET, 100) != BSP_OK) 
+    return BSP_TIMEOUT;
+    for (uint8_t i = 0; i < 5; ++i) 
+    if (read_byte(&b[i]) != BSP_OK) 
+    return BSP_TIMEOUT;
+    if ((uint8_t)(b[0] + b[1] + b[2] + b[3]) != b[4]) 
+    return BSP_ERROR;
+    data->humidity_pct = b[0]; 
+    data->temperature_c = b[2]; 
+    return BSP_OK;
 }

@@ -1,18 +1,18 @@
-# STM32 + ESP32-S3 智能家居系统
+# STM32 + ESP8266 智能家居系统
 
 本项目是对旧版“STM32F103 + ESP8266/机智云智能家居”的重新开发。
 目标硬件以成品传感器 PCB 为底板，STM32F103 负责实时采集和设备控制，
-外接 ESP32-S3 负责 Wi-Fi、MQTT 和手机端通信。
+板载 ESP8266 负责 Wi-Fi、MQTT 和手机端通信。
 
 正式工程路径：`F:\Smart`。
 
 ## 最终架构
 
 - STM32F103C8T6：传感器、OLED、按键、蜂鸣器、电机及本地自动控制
-- ESP32-S3：Wi-Fi、MQTT、远程控制和设备状态转发
-- STM32 与 ESP32-S3：UART 115200 bit/s
+- ESP8266：Wi-Fi、MQTT、远程控制和设备状态转发
+- STM32 与 ESP8266：UART 115200 bit/s
 - STM32 软件：FreeRTOS
-- ESP32 软件：ESP-IDF
+- ESP8266 软件：Arduino Core 3.1.2
 
 ## 当前进度
 
@@ -22,8 +22,8 @@
 - [ ] 实物通电与引脚验证
 - [ ] STM32 最小工程和板级自检
 - [ ] FreeRTOS 任务划分
-- [ ] STM32/ESP32 串口协议
-- [ ] ESP-IDF MQTT 客户端
+- [x] STM32/ESP8266 串口协议代码（待上板联调）
+- [ ] ESP8266 MQTT 客户端
 - [ ] 联调、故障恢复与演示材料
 
 ## 开发原则
