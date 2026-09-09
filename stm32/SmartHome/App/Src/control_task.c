@@ -11,7 +11,6 @@
 #include "bsp_sensors.h"
 #include "uart_task.h"
 
-extern QueueHandle_t controlQueue;
 extern QueueHandle_t sensorQueue;
 extern QueueHandle_t remoteControlQueue;
 extern QueueHandle_t controlAckQueue;

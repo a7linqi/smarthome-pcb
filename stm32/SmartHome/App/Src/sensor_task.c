@@ -11,7 +11,6 @@ extern QueueHandle_t uartSensorQueue;
 
 void Sensor_Task(void *params)
 {
-    BSP_Sensors_Init();
     bsp_sensor_snapshot_t snap;
     if (BSP_Sensors_Init() != BSP_OK)
     {
@@ -23,9 +22,10 @@ void Sensor_Task(void *params)
     {       
         if(BSP_Sensors_Read(&snap) == BSP_OK)
         {
-            xQueueSend(sensorQueue,&snap,portMAX_DELAY);
-            xQueueSend(displayQueue,&snap,portMAX_DELAY);
-            xQueueSend(alarmQueue,&snap,portMAX_DELAY);
+            /* 各队列只保留最新快照，慢消费者不会阻塞整个采集任务。 */
+            xQueueOverwrite(sensorQueue, &snap);
+            xQueueOverwrite(displayQueue, &snap);
+            xQueueOverwrite(alarmQueue, &snap);
             xQueueOverwrite(uartSensorQueue, &snap);
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
