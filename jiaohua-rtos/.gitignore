@@ -1,0 +1,43 @@
+# Local credentials
+firmware/stm32/HARDWARE/ESP8266/esp8266_config.h
+firmware/esp8266/bridge_config.h
+
+# Keil build products and local settings
+firmware/stm32/OBJ/
+firmware/stm32/LIST/
+firmware/stm32/build.log
+firmware/stm32/USER/*.uvguix.*
+firmware/stm32/USER/*.uvoptx
+firmware/stm32/USER/Listings/
+firmware/stm32/USER/Objects/
+
+# Arduino local products
+firmware/esp8266/build/
+
+# Legacy driver collection copied with the old project: keep it locally, but
+# publish only the drivers used by this watering controller.
+firmware/stm32/HARDWARE/*
+!firmware/stm32/HARDWARE/ADC/
+!firmware/stm32/HARDWARE/ADC/**
+!firmware/stm32/HARDWARE/DHT11/
+!firmware/stm32/HARDWARE/DHT11/**
+!firmware/stm32/HARDWARE/ESP8266/
+!firmware/stm32/HARDWARE/ESP8266/**
+!firmware/stm32/HARDWARE/KEY/
+!firmware/stm32/HARDWARE/KEY/**
+!firmware/stm32/HARDWARE/LED/
+!firmware/stm32/HARDWARE/LED/**
+!firmware/stm32/HARDWARE/OLED/
+!firmware/stm32/HARDWARE/OLED/**
+!firmware/stm32/HARDWARE/STMFLASH/
+!firmware/stm32/HARDWARE/STMFLASH/**
+
+firmware/stm32/HARDWARE/OLED/__Previews/
+firmware/stm32/CORE/startup_stm32f10x_hd.s
+firmware/stm32/USER/DebugConfig/
+firmware/stm32/USER/EventRecorderStub.scvd
+firmware/stm32/keilkilll.bat
+
+# Keep credential rules last so the hardware allow-list cannot re-include them.
+firmware/stm32/HARDWARE/ESP8266/esp8266_config.h
+firmware/esp8266/bridge_config.h
