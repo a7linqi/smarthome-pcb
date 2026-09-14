@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    tags:
+      - "jiaohua-app-v*"
     paths:
       - "jiaohua-rtos/android-app/**"
       - "jiaohua-rtos/mobile-dashboard/**"
@@ -13,7 +15,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout
@@ -39,3 +41,13 @@ jobs:
         with:
           name: JiaoHua-debug-apk
           path: jiaohua-rtos/android-app/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publish tagged APK release
+        if: startsWith(github.ref, 'refs/tags/jiaohua-app-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp jiaohua-rtos/android-app/app/build/outputs/apk/debug/app-debug.apk JiaoHua-v1.0.0.apk
+          gh release create "$GITHUB_REF_NAME" JiaoHua-v1.0.0.apk \
+            --title "智能浇花 APP v1.0.0" \
+            --notes "STM32 + ESP8266 智能浇花系统 Android 测试版。安装后通过 MQTT 直接连接设备。"
