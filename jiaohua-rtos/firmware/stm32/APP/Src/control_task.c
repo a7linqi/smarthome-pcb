@@ -162,13 +162,17 @@ void ControlTask(void *argument)
 
         if (pump_timeout_latched) {
             alarm = APP_ALARM_PUMP_TIMEOUT;
-        } else if ((xTaskGetTickCount() >=
+        } else if ((mode == APP_MODE_AUTO) &&
+                   (xTaskGetTickCount() >=
                     pdMS_TO_TICKS(SENSOR_STARTUP_GRACE_MS)) &&
                    !snapshot.sensor.dht11_valid) {
             alarm = APP_ALARM_DHT11_FAULT;
-        } else if (snapshot.sensor.temperature >= snapshot.temperature_high) {
+        } else if ((mode == APP_MODE_AUTO) &&
+                   (snapshot.sensor.temperature >=
+                    snapshot.temperature_high)) {
             alarm = APP_ALARM_TEMPERATURE_HIGH;
-        } else if (snapshot.sensor.soil_percent <= snapshot.soil_low) {
+        } else if ((mode == APP_MODE_AUTO) &&
+                   (snapshot.sensor.soil_percent <= snapshot.soil_low)) {
             alarm = APP_ALARM_SOIL_DRY;
         } else {
             alarm = APP_ALARM_NONE;
