@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#167a5b">
+  <meta name="description" content="STM32 + ESP8266 智能浇花系统控制端">
+  <title>智能浇花</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/plant.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">SMART IRRIGATION</p>
+        <h1>智能浇花系统</h1>
+        <div class="connection-row">
+          <span id="connection-dot" class="status-dot"></span>
+          <span id="connection-text">正在连接服务器</span>
+        </div>
+      </div>
+      <button id="settings-button" class="icon-button" type="button" aria-label="连接设置">⚙</button>
+    </header>
+
+    <main>
+      <section class="sensor-grid" aria-label="环境数据">
+        <article class="sensor-card temperature-card">
+          <img src="assets/wendu.png" alt="温度">
+          <div>
+            <span class="card-label">空气温度</span>
+            <strong><span id="temperature">--</span><small>℃</small></strong>
+          </div>
+        </article>
+        <article class="sensor-card humidity-card">
+          <img src="assets/shidu.png" alt="空气湿度">
+          <div>
+            <span class="card-label">空气湿度</span>
+            <strong><span id="humidity">--</span><small>%</small></strong>
+          </div>
+        </article>
+        <article class="sensor-card soil-card">
+          <img src="assets/turanshidu.png" alt="土壤湿度">
+          <div>
+            <span class="card-label">土壤湿度</span>
+            <strong><span id="soil">--</span><small>%</small></strong>
+            <span id="soil-adc" class="secondary-value">ADC --</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONTROL</p>
+            <h2>设备控制</h2>
+          </div>
+          <span id="mode-badge" class="badge">未知模式</span>
+        </div>
+
+        <div class="mode-control segmented-control">
+          <button type="button" data-command="auto">自动模式</button>
+          <button type="button" data-command="manual">手动模式</button>
+        </div>
+
+        <div class="control-row pump-row">
+          <div class="control-copy">
+            <img id="pump-icon" src="assets/Water_pump_OFF.png" alt="水泵">
+            <div>
+              <span class="card-label">水泵状态</span>
+              <strong id="pump-state">关闭</strong>
+            </div>
+          </div>
+          <div class="compact-actions">
+            <button class="secondary-button" type="button" data-command="pump-on">打开</button>
+            <button class="secondary-button danger" type="button" data-command="pump-off">关闭</button>
+          </div>
+        </div>
+
+        <div class="threshold-grid">
+          <label class="field">
+            <span>温度上限</span>
+            <span class="input-wrap"><input id="temperature-limit" type="number" min="10" max="60" value="35"><b>℃</b></span>
+            <button type="button" data-command="temp">设置</button>
+          </label>
+          <label class="field">
+            <span>土壤湿度下限</span>
+            <span class="input-wrap"><input id="soil-limit" type="number" min="5" max="95" value="25"><b>%</b></span>
+            <button type="button" data-command="soil">设置</button>
+          </label>
+        </div>
+      </section>
+
+      <section id="alarm-card" class="alarm-card normal" aria-live="polite">
+        <img id="alarm-icon" src="assets/baojing_OFF.png" alt="报警状态">
+        <div>
+          <span class="card-label">系统状态</span>
+          <strong id="alarm-text">等待设备数据</strong>
+          <small id="last-update">尚未收到数据</small>
+        </div>
+      </section>
+
+      <div id="command-feedback" class="feedback" aria-live="polite">控制端已启动</div>
+    </main>
+  </div>
+
+  <dialog id="settings-dialog">
+    <form id="settings-form" method="dialog">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">MQTT SETTINGS</p>
+          <h2>连接设置</h2>
+        </div>
+        <button class="close-button" value="cancel" aria-label="关闭">×</button>
+      </div>
+      <label>Broker地址<input id="broker-url" type="url" required value="wss://broker.emqx.io:8084/mqtt"></label>
+      <label>设备编号<input id="device-id" type="text" required value="2efe4067" pattern="[A-Za-z0-9_-]+"></label>
+      <p class="settings-note">主题格式：jiaohua/&lt;设备编号&gt;/data、control、ack</p>
+      <button id="save-settings" class="primary-button" value="default">保存并重新连接</button>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
