@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.JiaoHua" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#167A5B</item>
+        <item name="android:navigationBarColor">#F3F7F5</item>
+        <item name="android:statusBarColor">#0F6148</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
