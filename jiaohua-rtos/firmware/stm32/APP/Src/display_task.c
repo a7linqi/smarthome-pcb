@@ -10,51 +10,66 @@
 
 #define DISPLAY_PERIOD_MS  200U
 
+/* OLED_ShowText expects two-byte GBK codes for Chinese glyph lookup. Keeping
+ * the byte sequences explicit makes the display independent of source-file
+ * encoding and Keil's local code-page setting. */
+static const char TEXT_AUTO[] = "\xD7\xD4\xB6\xAF";
+static const char TEXT_MANUAL[] = "\xCA\xD6\xB6\xAF";
+
 static void ShowDataPage(const AppSnapshot *snapshot)
 {
-    char line[24];
+    char line[32];
+    const char *mode = snapshot->mode == APP_MODE_AUTO
+                           ? TEXT_AUTO
+                           : TEXT_MANUAL;
 
     if (snapshot->sensor.dht11_valid) {
-        sprintf(line, "Temp:%uC %s ", snapshot->sensor.temperature,
-                snapshot->mode == APP_MODE_AUTO ? "AUTO" : "MAN ");
+        sprintf(line, "\xCE\xC2\xB6\xC8:%u\xA1\xE6 %s ",
+                snapshot->sensor.temperature, mode);
         OLED_ShowText(0U, 0U, (u8 *)line, 0U);
 
-        sprintf(line, "Air Humi:%u%%   ", snapshot->sensor.humidity);
+        sprintf(line, "\xCA\xAA\xB6\xC8:%u%%       ",
+                snapshot->sensor.humidity);
         OLED_ShowText(0U, 2U, (u8 *)line, 0U);
     } else {
-        OLED_ShowText(0U, 0U, (u8 *)"DHT11:ERROR     ", 0U);
-        OLED_ShowText(0U, 2U, (u8 *)"Air Humi:--     ", 0U);
+        OLED_ShowText(0U, 0U,
+                      (u8 *)"\xCE\xC2\xB6\xC8:--         ", 0U);
+        OLED_ShowText(0U, 2U,
+                      (u8 *)"\xCA\xAA\xB6\xC8:--         ", 0U);
     }
 
-    sprintf(line, "Soil:%u%% ADC:%u ", snapshot->sensor.soil_percent,
-            snapshot->sensor.soil_adc);
+    sprintf(line, "\xCD\xC1\xC8\xC0\xCA\xAA\xB6\xC8:%u%%   ",
+            snapshot->sensor.soil_percent);
     OLED_ShowText(0U, 4U, (u8 *)line, 0U);
 
-    sprintf(line, "Pump:%s MQTT:%s ", snapshot->pump_on ? "ON " : "OFF",
+    sprintf(line, "\xCB\xAE\xB1\xC3:%s MQTT:%s",
+            snapshot->pump_on ? "ON " : "OFF",
             snapshot->mqtt_online ? "OK" : "--");
     OLED_ShowText(0U, 6U, (u8 *)line, 0U);
 }
 
 static void ShowControlPage(const AppSnapshot *snapshot)
 {
-    char line[24];
+    char line[32];
     const char marker0 = snapshot->ui_selection == 0U ? '>' : ' ';
     const char marker1 = snapshot->ui_selection == 1U ? '>' : ' ';
     const char marker2 = snapshot->ui_selection == 2U ? '>' : ' ';
     const char marker3 = snapshot->ui_selection == 3U ? '>' : ' ';
 
-    sprintf(line, "%cMode:%s       ", marker0,
-            snapshot->mode == APP_MODE_AUTO ? "AUTO" : "MAN ");
+    sprintf(line, "%c\xC4\xA3\xCA\xBD:%s      ", marker0,
+            snapshot->mode == APP_MODE_AUTO ? TEXT_AUTO : TEXT_MANUAL);
     OLED_ShowText(0U, 0U, (u8 *)line, 0U);
 
-    sprintf(line, "%cPump:%s       ", marker1,
+    sprintf(line, "%c\xCB\xAE\xB1\xC3:%s       ", marker1,
             snapshot->pump_on ? "ON " : "OFF");
     OLED_ShowText(0U, 2U, (u8 *)line, 0U);
 
-    sprintf(line, "%cTemp high:%u  ", marker2, snapshot->temperature_high);
+    sprintf(line, "%c\xCE\xC2\xB6\xC8\xC9\xCF\xCF\xDE:%u  ",
+            marker2, snapshot->temperature_high);
     OLED_ShowText(0U, 4U, (u8 *)line, 0U);
 
-    sprintf(line, "%cSoil low:%u   ", marker3, snapshot->soil_low);
+    sprintf(line, "%c\xCA\xAA\xB6\xC8\xCF\xC2\xCF\xDE:%u   ",
+            marker3, snapshot->soil_low);
     OLED_ShowText(0U, 6U, (u8 *)line, 0U);
 }
 
