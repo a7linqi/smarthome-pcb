@@ -80,6 +80,18 @@ A5 5A | Version | Type | Sequence | Flags | Length | Payload | CRC16
 - 土壤换算中的 `SOIL_ADC_DRY=1843`、`SOIL_ADC_WET=410` 来自初步测试。需要在实际花盆中重新测量干土和充分湿润土壤的 ADC 值。
 - 首次烧录先断开水泵或使用限流电源，确认 OLED、按键、传感器和 PB14 控制电平，再接水泵测试。
 
+## 电脑端联合测试
+
+烧录两颗 MCU 后，可以先运行 `tools/mqtt_monitor.ps1` 查看数据和控制应答，
+再用 `tools/mqtt_command.ps1` 发送命令。例如：
+
+```powershell
+.\tools\mqtt_command.ps1 -Command manual
+.\tools\mqtt_command.ps1 -Command pump-on
+.\tools\mqtt_command.ps1 -Command pump-off
+.\tools\mqtt_command.ps1 -Command soil -Value 40
+```
+
 ## 当前验证状态
 
 - STM32 Keil ARMCC5：已通过完整构建，0 errors、0 warnings。
