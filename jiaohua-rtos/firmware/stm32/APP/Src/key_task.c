@@ -17,6 +17,8 @@ static void SendCommand(AppCommandType type, uint16_t value)
 
     command.type = type;
     command.value = value;
+    command.sequence = 0U;
+    command.requires_ack = false;
     (void)xQueueSend(g_app_command_queue, &command, 0U);
 }
 

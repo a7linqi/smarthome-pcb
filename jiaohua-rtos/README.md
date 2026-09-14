@@ -27,12 +27,31 @@ flowchart LR
 
 任务之间通过一个命令队列和受互斥锁保护的状态快照通信。控制任务是水泵状态的唯一写入者，避免多个任务同时改 GPIO。
 
+## STM32 与 ESP8266 串口协议
+
+ESP8266 运行项目自带的 Arduino 固件，不依赖原厂 AT 固件。两颗 MCU 上电后直接通过 USART2 传输二进制帧：
+
+```text
+A5 5A | Version | Type | Sequence | Flags | Length | Payload | CRC16
+```
+
+| Type | 方向 | 内容 |
+| --- | --- | --- |
+| `0x01` | 双向 | 心跳请求和回复 |
+| `0x10` | STM32 → ESP8266 | 温度、湿度、土壤湿度、ADC、模式、水泵、报警 |
+| `0x20` | ESP8266 → STM32 | 控制命令和参数 |
+| `0x21` | STM32 → ESP8266 | 命令执行结果与实际值 |
+| `0x30` | ESP8266 → STM32 | MQTT 在线状态 |
+
+接收端逐字节寻找帧头，根据 `Length` 等待完整数据，并用 CRC-16/CCITT 检查传输完整性。
+
 ## MQTT 数据流
 
 - 上报：传感器 → `SensorTask` → 状态快照 → `CommTask` → USART2 → ESP8266 → MQTT 数据主题。
 - 控制：手机发布控制主题 → Broker → ESP8266 订阅回调 → USART2 → `CommTask` → 命令队列 → `ControlTask` → 水泵。
-- ESP8266 每 5 秒尝试一次 MQTT 重连，并向 STM32 报告 `+MQTT:ONLINE` 或 `+MQTT:OFFLINE`。
+- ESP8266 每 5 秒尝试一次 MQTT 重连，并通过 `0x30` 二进制帧向 STM32 报告在线状态。
 - 公共 Broker 默认主题为 `jiaohua/<设备命名空间>/data` 和 `jiaohua/<设备命名空间>/control`。
+- 遥测主题使用 JSON；控制主题使用简短文本命令；应答发布到 `jiaohua/<设备命名空间>/ack`。
 
 ## 编译
 
@@ -50,10 +69,9 @@ flowchart LR
 
 ## 本地配置
 
-真实 Wi-Fi 密码和云端密钥不会提交到 Git：
+真实 Wi-Fi 密码和云端密钥不会提交到 Git。复制
+`firmware/esp8266/bridge_config.example.h` 为 `bridge_config.h`，然后填写本地配置。
 
-- STM32：复制 `esp8266_config.example.h` 为 `esp8266_config.h`。
-- ESP8266：复制 `bridge_config.example.h` 为 `bridge_config.h`。
 
 ## 上板前检查
 

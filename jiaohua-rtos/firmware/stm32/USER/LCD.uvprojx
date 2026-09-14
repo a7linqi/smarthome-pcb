@@ -598,6 +598,11 @@
               <FilePath>..\APP\Src\app_model.c</FilePath>
             </File>
             <File>
+              <FileName>app_protocol.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Src\app_protocol.c</FilePath>
+            </File>
+            <File>
               <FileName>sensor_task.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\APP\Src\sensor_task.c</FilePath>

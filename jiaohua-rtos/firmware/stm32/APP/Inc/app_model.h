@@ -57,9 +57,19 @@ typedef enum {
 typedef struct {
     AppCommandType type;
     uint16_t value;
+    uint8_t sequence;
+    bool requires_ack;
 } AppCommand;
 
+typedef struct {
+    AppCommandType type;
+    uint16_t value;
+    uint8_t sequence;
+    uint8_t status;
+} AppControlAck;
+
 extern QueueHandle_t g_app_command_queue;
+extern QueueHandle_t g_app_ack_queue;
 
 bool AppModel_Init(void);
 void AppModel_GetSnapshot(AppSnapshot *snapshot);

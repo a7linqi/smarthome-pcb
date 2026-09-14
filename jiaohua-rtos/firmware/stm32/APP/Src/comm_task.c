@@ -1,93 +1,116 @@
 #include "comm_task.h"
 
-#include <stdio.h>
-#include <string.h>
-
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
 
 #include "app_model.h"
+#include "app_protocol.h"
 #include "esp8266.h"
 
 #define COMM_POLL_MS       20U
 #define TELEMETRY_MS     2000U
+#define HEARTBEAT_MS     5000U
+#define TELEMETRY_LENGTH   11U
 
-extern unsigned char esp8266_buf[buf_len];
+static uint8_t tx_sequence;
 
-/* Used by the legacy ESP8266 initialization driver. */
-char Flagout = 1;
+static void SendFrame(uint8_t type, uint8_t sequence,
+                      const uint8_t *payload, uint16_t length)
+{
+    uint8_t output[APP_PROTOCOL_MAX_FRAME];
+    const size_t count = AppProtocol_Encode(type, sequence, payload, length,
+                                            output, sizeof(output));
 
-static void QueueCommand(AppCommandType type, uint16_t value)
+    if (count > 0U) {
+        ESP8266_SendData(output, (uint16_t)count);
+    }
+}
+
+static void QueueRemoteCommand(const AppProtocolFrame *frame)
 {
     AppCommand command;
+    const uint8_t wire_command = frame->payload[0];
 
-    command.type = type;
-    command.value = value;
+    if ((frame->length != 3U) || (wire_command < 1U) ||
+        (wire_command > 6U)) {
+        return;
+    }
+
+    command.type = (AppCommandType)(wire_command - 1U);
+    command.value = AppProtocol_GetU16(frame->payload + 1U);
+    command.sequence = frame->sequence;
+    command.requires_ack = true;
     (void)xQueueSend(g_app_command_queue, &command, 0U);
 }
 
-static void ParseRemoteCommand(const char *text)
+static void HandleFrame(const AppProtocolFrame *frame)
 {
-    const char *value_text;
-    int value;
-
-    if (strstr(text, "+MQTT:ONLINE") != NULL) {
-        AppModel_SetMqttOnline(true);
-    } else if (strstr(text, "+MQTT:OFFLINE") != NULL) {
-        AppModel_SetMqttOnline(false);
-    } else if (strstr(text, "SET_MODE:ZD") != NULL) {
-        QueueCommand(APP_CMD_SET_AUTO, 0U);
-    } else if (strstr(text, "SET_MODE:SD") != NULL) {
-        QueueCommand(APP_CMD_SET_MANUAL, 0U);
-    } else if (strstr(text, "Water_pump_ON") != NULL) {
-        QueueCommand(APP_CMD_PUMP_ON, 0U);
-    } else if (strstr(text, "Water_pump_OFF") != NULL) {
-        QueueCommand(APP_CMD_PUMP_OFF, 0U);
-    } else if ((value_text = strstr(text, "SET_T_H:")) != NULL) {
-        if (sscanf(value_text + 8, "%d", &value) == 1) {
-            QueueCommand(APP_CMD_SET_TEMPERATURE_HIGH, (uint16_t)value);
-        }
-    } else if ((value_text = strstr(text, "SET_H_L:")) != NULL) {
-        if (sscanf(value_text + 8, "%d", &value) == 1) {
-            QueueCommand(APP_CMD_SET_SOIL_LOW, (uint16_t)value);
-        }
+    if (frame->type == APP_MSG_CONTROL_COMMAND) {
+        QueueRemoteCommand(frame);
+    } else if ((frame->type == APP_MSG_MQTT_STATUS) &&
+               (frame->length == 1U)) {
+        AppModel_SetMqttOnline(frame->payload[0] != 0U);
     }
 }
 
 static void PublishTelemetry(const AppSnapshot *snapshot)
 {
-    char message[160];
+    uint8_t payload[TELEMETRY_LENGTH];
 
-    sprintf(message,
-            "cmd=2&uid=%s&topic=data&msg=#%s#%u#%u#%u#%u#%u#sensordata#\r\n",
-            BEMFA_ID,
-            snapshot->mode == APP_MODE_AUTO ? "ZD" : "SD",
-            snapshot->sensor.temperature,
-            snapshot->sensor.humidity,
-            snapshot->sensor.soil_percent,
-            snapshot->pump_on ? 1U : 0U,
-            snapshot->alarm != APP_ALARM_NONE ? 1U : 0U);
+    AppProtocol_PutU16(payload + 0U, snapshot->sensor.temperature);
+    AppProtocol_PutU16(payload + 2U, snapshot->sensor.humidity);
+    AppProtocol_PutU16(payload + 4U, snapshot->sensor.soil_percent);
+    AppProtocol_PutU16(payload + 6U, snapshot->sensor.soil_adc);
+    payload[8] = (uint8_t)snapshot->mode;
+    payload[9] = snapshot->pump_on ? 1U : 0U;
+    payload[10] = (uint8_t)snapshot->alarm;
 
-    ESP8266_SendData((unsigned char *)message);
+    SendFrame(APP_MSG_TELEMETRY, tx_sequence++, payload, sizeof(payload));
+}
+
+static void PublishControlAck(const AppControlAck *ack)
+{
+    uint8_t payload[4];
+
+    payload[0] = (uint8_t)ack->type + 1U;
+    payload[1] = ack->status;
+    AppProtocol_PutU16(payload + 2U, ack->value);
+    SendFrame(APP_MSG_CONTROL_ACK, ack->sequence, payload, sizeof(payload));
 }
 
 void CommTask(void *argument)
 {
     TickType_t last_publish;
+    TickType_t last_heartbeat;
     AppSnapshot snapshot;
+    AppControlAck ack;
+    AppProtocolParser parser;
+    AppProtocolFrame frame;
+    uint8_t received[buf_len];
 
     (void)argument;
 
     ESP8266_Init(115200U);
-    /* ESP8266_Init returns only after Wi-Fi, MQTT and subscription succeed. */
-    AppModel_SetMqttOnline(true);
+    AppProtocol_ParserInit(&parser);
+    AppModel_SetMqttOnline(false);
     last_publish = xTaskGetTickCount();
+    last_heartbeat = last_publish;
 
     for (;;) {
-        if (ESP8266_WaitRecive() == REV_OK) {
-            ParseRemoteCommand((const char *)esp8266_buf);
-            ESP8266_Clear();
+        uint16_t index;
+        const uint16_t count = ESP8266_ReadReceived(received,
+                                                    sizeof(received));
+
+        for (index = 0U; index < count; ++index) {
+            if (AppProtocol_Feed(&parser, received[index], &frame) ==
+                APP_PARSE_FRAME) {
+                HandleFrame(&frame);
+            }
+        }
+
+        while (xQueueReceive(g_app_ack_queue, &ack, 0U) == pdTRUE) {
+            PublishControlAck(&ack);
         }
 
         if ((xTaskGetTickCount() - last_publish) >=
@@ -95,6 +118,12 @@ void CommTask(void *argument)
             AppModel_GetSnapshot(&snapshot);
             PublishTelemetry(&snapshot);
             last_publish = xTaskGetTickCount();
+        }
+
+        if ((xTaskGetTickCount() - last_heartbeat) >=
+            pdMS_TO_TICKS(HEARTBEAT_MS)) {
+            SendFrame(APP_MSG_HEARTBEAT, tx_sequence++, NULL, 0U);
+            last_heartbeat = xTaskGetTickCount();
         }
 
         vTaskDelay(pdMS_TO_TICKS(COMM_POLL_MS));

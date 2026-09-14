@@ -1,200 +1,241 @@
-  /*
- * ESP8266_MQTT_Bridge  —  串口 <-> MQTT 桥（免费用真 MQTT）
- *
- * 作用：
- *   对 STM32 侧：仍然假装成一个 AT 模块（所以 STM32 代码不用改）
- *   对网络侧：用真正的 MQTT 协议连免费 broker
- *     - STM32 上报的 cmd=2...topic=data&msg=xxx   -> MQTT PUBLISH 到数据主题
- *     - MQTT 控制主题收到消息                      -> 原样转发给 STM32
- *
- * 免费 broker 两种可选（改下面 BROKER_CHOICE）：
- *   1) BROKER_PUBLIC : broker.emqx.io:1883  —— 公共免费，不用注册（推荐先用这个）
- *   2) BROKER_BEMFA  : bemfa.com:9501       —— 你自己的巴法云 MQTT 账号（免费，
- *                       需先在巴法云"MQTT设备云"里创建 data / control 两个主题）
- *
- * 需要安装库：PubSubClient（Arduino IDE -> 工具 -> 管理库 -> 搜索 PubSubClient -> 安装）
- * 波特率：115200（和 STM32 的 USART2 一致）
- */
+/* ESP8266 UART <-> MQTT bridge for the watering controller.
+ * The ESP8266 runs this custom firmware; no AT firmware is required. */
 
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-#include "bridge_config.h"
 
-// ================= 配置 =================
+#include "bridge_config.h"
+#include "protocol.h"
+
 #define BROKER_PUBLIC 2
 #define BROKER_BEMFA  1
-#define BROKER_CHOICE BROKER_PUBLIC      // 用免费公共 broker（无需注册/无需建主题）
+#define BROKER_CHOICE BROKER_PUBLIC
 
 #if BROKER_CHOICE == BROKER_BEMFA
-  const char* MQTT_HOST    = "mqtt.bemfa.com";
-  const uint16_t MQTT_PORT = 9501;
-  const char* MQTT_USER    = BRIDGE_BEMFA_USER;
-  const char* MQTT_PASS    = BRIDGE_BEMFA_PASSWORD;
-  const char* TOPIC_DATA    = "data";
-  const char* TOPIC_CONTROL = "control";
+const char *MQTT_HOST = "mqtt.bemfa.com";
+const uint16_t MQTT_PORT = 9501;
+const char *MQTT_USER = BRIDGE_BEMFA_USER;
+const char *MQTT_PASS = BRIDGE_BEMFA_PASSWORD;
+const char *TOPIC_DATA = "data";
+const char *TOPIC_CONTROL = "control";
+const char *TOPIC_ACK = "control_ack";
 #else
-  const char* MQTT_HOST    = "broker.emqx.io";   // 公共免费 broker
-  const uint16_t MQTT_PORT = 1883;
-  const char* MQTT_USER    = "";
-  const char* MQTT_PASS    = "";
-  const char* TOPIC_DATA    = "jiaohua/" BRIDGE_TOPIC_NAMESPACE "/data";
-  const char* TOPIC_CONTROL = "jiaohua/" BRIDGE_TOPIC_NAMESPACE "/control";
+const char *MQTT_HOST = "broker.emqx.io";
+const uint16_t MQTT_PORT = 1883;
+const char *MQTT_USER = "";
+const char *MQTT_PASS = "";
+const char *TOPIC_DATA = "jiaohua/" BRIDGE_TOPIC_NAMESPACE "/data";
+const char *TOPIC_CONTROL = "jiaohua/" BRIDGE_TOPIC_NAMESPACE "/control";
+const char *TOPIC_ACK = "jiaohua/" BRIDGE_TOPIC_NAMESPACE "/ack";
 #endif
-// =======================================
 
-WiFiClient   net;
-PubSubClient mqtt(net);
-
+constexpr unsigned long WIFI_RETRY_MS = 10000UL;
 constexpr unsigned long MQTT_RETRY_MS = 5000UL;
-constexpr size_t SERIAL_LINE_MAX = 256U;
 
-uint8_t  wifiState = 0;          // 0未开始 1连接中 2已连接 3失败
-unsigned long wifiStart = 0;
-bool     bridge = false;         // 是否已进入"透传"(桥接)模式
-String   rxLine = "";
-String   savedSsid, savedPass;
-unsigned long lastMqttAttempt = 0;
-bool mqttStateReported = false;
+WiFiClient networkClient;
+PubSubClient mqtt(networkClient);
+Protocol::Parser uartParser;
 
-void replyOK()  { Serial.print("OK\r\n"); }
-void replyErr() { Serial.print("ERROR\r\n"); }
+unsigned long lastWifiAttempt;
+unsigned long lastMqttAttempt;
+bool reportedMqttOnline;
+uint8_t txSequence;
 
-// MQTT 收到消息 -> 转发给 STM32（换行结尾，方便 STM32 解析指令）
-void onMqtt(char* topic, byte* payload, unsigned int len) {
-  for (unsigned int i = 0; i < len; i++) Serial.write(payload[i]);
-  Serial.print("\r\n");
-}
+void sendFrame(uint8_t type, uint8_t sequence,
+               const uint8_t *payload, uint16_t length)
+{
+    uint8_t output[Protocol::MAX_FRAME];
+    const size_t count = Protocol::encode(type, sequence, payload, length,
+                                          output, sizeof(output));
 
-bool mqttConnect() {
-  if (WiFi.status() != WL_CONNECTED) return false;
-  mqtt.setServer(MQTT_HOST, MQTT_PORT);
-  mqtt.setCallback(onMqtt);
-  mqtt.setKeepAlive(60);
-
-  char clientId[32];
-  snprintf(clientId, sizeof(clientId), "jiaohua-%06X", ESP.getChipId());
-
-  bool ok;
-  if (strlen(MQTT_USER) == 0) ok = mqtt.connect(clientId);
-  else                        ok = mqtt.connect(clientId, MQTT_USER, MQTT_PASS);
-
-  if (ok) {
-    mqtt.subscribe(TOPIC_CONTROL);   // 只订阅控制主题
-    if (bridge && !mqttStateReported) Serial.print("+MQTT:ONLINE\r\n");
-    mqttStateReported = true;
-  }
-  return ok;
-}
-
-void maintainMqtt() {
-  if (WiFi.status() != WL_CONNECTED) {
-    if (mqttStateReported) Serial.print("+MQTT:OFFLINE\r\n");
-    mqttStateReported = false;
-    return;
-  }
-
-  if (mqtt.connected()) {
-    mqtt.loop();
-    return;
-  }
-
-  if (mqttStateReported) Serial.print("+MQTT:OFFLINE\r\n");
-  mqttStateReported = false;
-
-  const unsigned long now = millis();
-  if (now - lastMqttAttempt >= MQTT_RETRY_MS) {
-    lastMqttAttempt = now;
-    mqttConnect();
-  }
-}
-
-// ---------- WiFi 连接（非阻塞，连上才回 OK） ----------
-void startWifi(const String& s, const String& p) {
-  savedSsid = s; savedPass = p;
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(savedSsid.c_str(), savedPass.c_str());
-  wifiState = 1; wifiStart = millis();
-}
-
-void pollWifi() {
-  if (wifiState == 1) {
-    if (WiFi.status() == WL_CONNECTED) { wifiState = 2; replyOK(); return; }
-    if (millis() - wifiStart > 12000) { WiFi.disconnect(); wifiState = 3; replyErr(); }
-  }
-}
-
-// ---------- AT 指令处理（给 STM32 用） ----------
-void handleAt(String& s) {
-  if (s.startsWith("AT+CIPSTART")) {
-    if (WiFi.status() == WL_CONNECTED && mqttConnect()) Serial.print("CONNECT\r\nOK\r\n");
-    else replyErr();
-  } else if (s.startsWith("AT+CIPSEND")) {
-    bridge = true;                 // 进入桥接模式
-    replyOK();
-    Serial.print(mqtt.connected() ? "+MQTT:ONLINE\r\n"
-                                  : "+MQTT:OFFLINE\r\n");
-  } else if (s.startsWith("AT+CWJAP")) {
-    int q1 = s.indexOf('"');
-    int q2 = s.indexOf('"', q1 + 1);
-    int q3 = s.indexOf('"', q2 + 1);
-    int q4 = s.indexOf('"', q3 + 1);
-    if (q1 < 0 || q4 < 0) { replyOK(); return; }
-    if (wifiState == 1) return;                       // 连接中，忽略重复指令
-    if (wifiState == 2) { replyOK(); return; }        // 已连接
-    startWifi(s.substring(q1 + 1, q2), s.substring(q3 + 1, q4));
-  } else {
-    replyOK();                     // AT / CWMODE / CIPMODE 等一律 OK
-  }
-}
-
-// ---------- 桥接模式：解析 STM32 发来的数据 ----------
-void handleBridge(String& s) {
-  if (s.startsWith("cmd=1")) {
-    // STM32 的订阅指令：我们内部已经订阅好了，直接回"订阅成功"
-    Serial.print("cmd=1&res=1\r\n");
-    mqtt.subscribe(TOPIC_CONTROL);
-    return;
-  }
-  if (s.startsWith("cmd=2")) {
-    // 形如 cmd=2&uid=..&topic=data&msg=#..#sensordata#
-    int ti = s.indexOf("topic=");
-    int mi = s.indexOf("msg=");
-    if (ti < 0 || mi < 0) return;
-    int te = s.indexOf('&', ti);
-    String topic = (te > 0) ? s.substring(ti + 6, te) : s.substring(ti + 6);
-    String msg   = s.substring(mi + 4);
-    const char* outTopic = TOPIC_DATA;
-    if (topic == "control") outTopic = TOPIC_CONTROL;
-    if (mqtt.connected()) mqtt.publish(outTopic, msg.c_str());
-    return;
-  }
-  // 其他内容忽略
-}
-
-void setup() {
-  Serial.begin(115200);
-  rxLine.reserve(SERIAL_LINE_MAX);
-  WiFi.setAutoReconnect(true);
-  WiFi.persistent(false);
-  WiFi.mode(WIFI_OFF);
-  delay(100);
-}
-
-void loop() {
-  while (Serial.available()) {
-    char c = (char)Serial.read();
-    if (c == '\n') {
-      if (bridge) handleBridge(rxLine); else handleAt(rxLine);
-      rxLine = "";
-    } else if (c != '\r') {
-      if (rxLine.length() < SERIAL_LINE_MAX) {
-        rxLine += c;
-      } else {
-        rxLine = "";
-      }
+    if (count > 0U) {
+        Serial.write(output, count);
     }
-  }
+}
 
-  if (!bridge) pollWifi();
-  else maintainMqtt();   // 掉线后每5秒尝试一次，避免阻塞主循环
+void reportMqttStatus(bool online)
+{
+    const uint8_t payload[1] = {online ? 1U : 0U};
+    sendFrame(Protocol::MQTT_STATUS, txSequence++, payload, sizeof(payload));
+    reportedMqttOnline = online;
+}
+
+bool decodeControl(const byte *payload, unsigned int length,
+                   uint8_t &command, uint16_t &value)
+{
+    char text[64];
+    const size_t count = (length < sizeof(text) - 1U)
+                             ? length
+                             : sizeof(text) - 1U;
+
+    memcpy(text, payload, count);
+    text[count] = '\0';
+    value = 0U;
+
+    if (strcmp(text, "SET_MODE:ZD") == 0) {
+        command = 1U;
+    } else if (strcmp(text, "SET_MODE:SD") == 0) {
+        command = 2U;
+    } else if (strcmp(text, "Water_pump_ON") == 0) {
+        command = 3U;
+    } else if (strcmp(text, "Water_pump_OFF") == 0) {
+        command = 4U;
+    } else if (strncmp(text, "SET_T_H:", 8U) == 0) {
+        command = 5U;
+        value = static_cast<uint16_t>(atoi(text + 8U));
+    } else if (strncmp(text, "SET_H_L:", 8U) == 0) {
+        command = 6U;
+        value = static_cast<uint16_t>(atoi(text + 8U));
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
+void onMqttMessage(char *topic, byte *payload, unsigned int length)
+{
+    uint8_t command;
+    uint16_t value;
+    uint8_t framePayload[3];
+
+    if ((strcmp(topic, TOPIC_CONTROL) != 0) ||
+        !decodeControl(payload, length, command, value)) {
+        return;
+    }
+
+    framePayload[0] = command;
+    framePayload[1] = static_cast<uint8_t>(value);
+    framePayload[2] = static_cast<uint8_t>(value >> 8);
+    sendFrame(Protocol::CONTROL_COMMAND, txSequence++, framePayload,
+              sizeof(framePayload));
+}
+
+bool connectMqtt()
+{
+    char clientId[32];
+    bool connected;
+
+    if (WiFi.status() != WL_CONNECTED) {
+        return false;
+    }
+
+    snprintf(clientId, sizeof(clientId), "jiaohua-%06X", ESP.getChipId());
+    if (strlen(MQTT_USER) == 0U) {
+        connected = mqtt.connect(clientId);
+    } else {
+        connected = mqtt.connect(clientId, MQTT_USER, MQTT_PASS);
+    }
+
+    if (connected) {
+        mqtt.subscribe(TOPIC_CONTROL);
+        reportMqttStatus(true);
+    }
+
+    return connected;
+}
+
+void maintainConnections()
+{
+    const unsigned long now = millis();
+
+    if (WiFi.status() != WL_CONNECTED) {
+        if (reportedMqttOnline) {
+            reportMqttStatus(false);
+        }
+        if (now - lastWifiAttempt >= WIFI_RETRY_MS) {
+            lastWifiAttempt = now;
+            WiFi.begin(BRIDGE_WIFI_SSID, BRIDGE_WIFI_PASSWORD);
+        }
+        return;
+    }
+
+    if (!mqtt.connected()) {
+        if (reportedMqttOnline) {
+            reportMqttStatus(false);
+        }
+        if (now - lastMqttAttempt >= MQTT_RETRY_MS) {
+            lastMqttAttempt = now;
+            connectMqtt();
+        }
+        return;
+    }
+
+    mqtt.loop();
+}
+
+void publishTelemetry(const Protocol::Frame &frame)
+{
+    char json[160];
+
+    if (frame.length != 11U) {
+        return;
+    }
+
+    snprintf(json, sizeof(json),
+             "{\"temperature\":%u,\"humidity\":%u,\"soil\":%u,"
+             "\"soil_adc\":%u,\"mode\":%u,\"pump\":%u,\"alarm\":%u}",
+             Protocol::getU16LE(frame.payload + 0U),
+             Protocol::getU16LE(frame.payload + 2U),
+             Protocol::getU16LE(frame.payload + 4U),
+             Protocol::getU16LE(frame.payload + 6U),
+             frame.payload[8], frame.payload[9], frame.payload[10]);
+    mqtt.publish(TOPIC_DATA, json, true);
+}
+
+void publishControlAck(const Protocol::Frame &frame)
+{
+    char json[96];
+
+    if (frame.length != 4U) {
+        return;
+    }
+
+    snprintf(json, sizeof(json),
+             "{\"sequence\":%u,\"command\":%u,\"status\":%u,\"value\":%u}",
+             frame.sequence, frame.payload[0], frame.payload[1],
+             Protocol::getU16LE(frame.payload + 2U));
+    mqtt.publish(TOPIC_ACK, json, false);
+}
+
+void handleUartFrame(const Protocol::Frame &frame)
+{
+    if ((frame.type == Protocol::TELEMETRY) && mqtt.connected()) {
+        publishTelemetry(frame);
+    } else if ((frame.type == Protocol::CONTROL_ACK) && mqtt.connected()) {
+        publishControlAck(frame);
+    } else if (frame.type == Protocol::HEARTBEAT) {
+        sendFrame(Protocol::HEARTBEAT, frame.sequence, nullptr, 0U);
+    }
+}
+
+void setup()
+{
+    Serial.begin(115200);
+    WiFi.persistent(false);
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.begin(BRIDGE_WIFI_SSID, BRIDGE_WIFI_PASSWORD);
+
+    mqtt.setServer(MQTT_HOST, MQTT_PORT);
+    mqtt.setCallback(onMqttMessage);
+    mqtt.setKeepAlive(60U);
+    mqtt.setBufferSize(256U);
+
+    lastWifiAttempt = millis();
+    lastMqttAttempt = 0U;
+    reportedMqttOnline = false;
+}
+
+void loop()
+{
+    Protocol::Frame frame;
+
+    maintainConnections();
+
+    while (Serial.available() > 0) {
+        if (uartParser.feed(static_cast<uint8_t>(Serial.read()), frame)) {
+            handleUartFrame(frame);
+        }
+    }
 }

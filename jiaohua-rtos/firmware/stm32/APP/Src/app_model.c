@@ -6,6 +6,7 @@ static SemaphoreHandle_t app_mutex;
 static AppSnapshot app_snapshot;
 
 QueueHandle_t g_app_command_queue;
+QueueHandle_t g_app_ack_queue;
 
 bool AppModel_Init(void)
 {
@@ -17,8 +18,10 @@ bool AppModel_Init(void)
 
     app_mutex = xSemaphoreCreateMutex();
     g_app_command_queue = xQueueCreate(8U, sizeof(AppCommand));
+    g_app_ack_queue = xQueueCreate(4U, sizeof(AppControlAck));
 
-    return (app_mutex != NULL) && (g_app_command_queue != NULL);
+    return (app_mutex != NULL) && (g_app_command_queue != NULL) &&
+           (g_app_ack_queue != NULL);
 }
 
 void AppModel_GetSnapshot(AppSnapshot *snapshot)
