@@ -66,6 +66,19 @@ void AppModel_SetNetworkEnabled(bool enabled)
     }
 }
 
+void AppModel_SetNetworkProgress(uint8_t progress)
+{
+    if (progress > 100U) {
+        progress = 100U;
+    }
+
+    if (xSemaphoreTake(app_mutex, portMAX_DELAY) == pdTRUE) {
+        app_snapshot.network_progress = progress;
+        app_snapshot.mqtt_online = (progress == 100U);
+        xSemaphoreGive(app_mutex);
+    }
+}
+
 void AppModel_SetMqttOnline(bool online)
 {
     if (xSemaphoreTake(app_mutex, portMAX_DELAY) == pdTRUE) {

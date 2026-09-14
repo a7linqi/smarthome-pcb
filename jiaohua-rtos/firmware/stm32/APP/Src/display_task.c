@@ -16,6 +16,17 @@
 static const char TEXT_AUTO[] = "\xD7\xD4\xB6\xAF";
 static const char TEXT_MANUAL[] = "\xCA\xD6\xB6\xAF";
 
+static void ShowNetworkPage(uint8_t progress)
+{
+    char line[20];
+
+    OLED_ShowText(0U, 2U,
+                  (u8 *)"\xD5\xFD\xD4\xDA\xC1\xAC\xBD\xD3 WIFI...",
+                  0U);
+    sprintf(line, "\xBD\xF8\xB6\xC8:%u%%   ", progress);
+    OLED_ShowText(24U, 6U, (u8 *)line, 0U);
+}
+
 static void ShowDataPage(const AppSnapshot *snapshot)
 {
     char line[32];
@@ -79,20 +90,28 @@ static void ShowControlPage(const AppSnapshot *snapshot)
 void DisplayTask(void *argument)
 {
     AppSnapshot snapshot;
-    uint8_t last_page = 0xFFU;
+    uint8_t last_view = 0xFFU;
     TickType_t last_wake = xTaskGetTickCount();
 
     (void)argument;
 
     for (;;) {
-        AppModel_GetSnapshot(&snapshot);
+        uint8_t view;
 
-        if (snapshot.ui_page != last_page) {
+        AppModel_GetSnapshot(&snapshot);
+        view = (snapshot.network_enabled &&
+                (snapshot.network_progress < 100U))
+                   ? 2U
+                   : snapshot.ui_page;
+
+        if (view != last_view) {
             OLED_Clear(0U);
-            last_page = snapshot.ui_page;
+            last_view = view;
         }
 
-        if (snapshot.ui_page == 0U) {
+        if (view == 2U) {
+            ShowNetworkPage(snapshot.network_progress);
+        } else if (view == 0U) {
             ShowDataPage(&snapshot);
         } else {
             ShowControlPage(&snapshot);

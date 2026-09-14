@@ -38,7 +38,7 @@ Protocol::Parser uartParser;
 
 unsigned long lastWifiAttempt;
 unsigned long lastMqttAttempt;
-bool reportedMqttOnline;
+uint8_t reportedNetworkProgress;
 uint8_t txSequence;
 
 void sendFrame(uint8_t type, uint8_t sequence,
@@ -53,11 +53,16 @@ void sendFrame(uint8_t type, uint8_t sequence,
     }
 }
 
-void reportMqttStatus(bool online)
+void reportNetworkProgress(uint8_t progress)
 {
-    const uint8_t payload[1] = {online ? 1U : 0U};
+    const uint8_t payload[1] = {progress};
+
+    if (progress == reportedNetworkProgress) {
+        return;
+    }
+
     sendFrame(Protocol::MQTT_STATUS, txSequence++, payload, sizeof(payload));
-    reportedMqttOnline = online;
+    reportedNetworkProgress = progress;
 }
 
 bool decodeControl(const byte *payload, unsigned int length,
@@ -128,8 +133,13 @@ bool connectMqtt()
     }
 
     if (connected) {
-        mqtt.subscribe(TOPIC_CONTROL);
-        reportMqttStatus(true);
+        reportNetworkProgress(90U);
+        if (mqtt.subscribe(TOPIC_CONTROL)) {
+            reportNetworkProgress(100U);
+        } else {
+            mqtt.disconnect();
+            connected = false;
+        }
     }
 
     return connected;
@@ -140,9 +150,7 @@ void maintainConnections()
     const unsigned long now = millis();
 
     if (WiFi.status() != WL_CONNECTED) {
-        if (reportedMqttOnline) {
-            reportMqttStatus(false);
-        }
+        reportNetworkProgress(30U);
         if (now - lastWifiAttempt >= WIFI_RETRY_MS) {
             lastWifiAttempt = now;
             WiFi.begin(BRIDGE_WIFI_SSID, BRIDGE_WIFI_PASSWORD);
@@ -150,9 +158,13 @@ void maintainConnections()
         return;
     }
 
+    if (reportedNetworkProgress < 50U) {
+        reportNetworkProgress(50U);
+    }
+
     if (!mqtt.connected()) {
-        if (reportedMqttOnline) {
-            reportMqttStatus(false);
+        if (reportedNetworkProgress > 50U) {
+            reportNetworkProgress(50U);
         }
         if (now - lastMqttAttempt >= MQTT_RETRY_MS) {
             lastMqttAttempt = now;
@@ -212,10 +224,13 @@ void handleUartFrame(const Protocol::Frame &frame)
 void setup()
 {
     Serial.begin(115200);
+    reportedNetworkProgress = 255U;
+    reportNetworkProgress(0U);
     WiFi.persistent(false);
     WiFi.mode(WIFI_STA);
     WiFi.setAutoReconnect(true);
     WiFi.begin(BRIDGE_WIFI_SSID, BRIDGE_WIFI_PASSWORD);
+    reportNetworkProgress(30U);
 
     mqtt.setServer(MQTT_HOST, MQTT_PORT);
     mqtt.setCallback(onMqttMessage);
@@ -224,7 +239,6 @@ void setup()
 
     lastWifiAttempt = millis();
     lastMqttAttempt = 0U;
-    reportedMqttOnline = false;
 }
 
 void loop()

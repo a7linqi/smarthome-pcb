@@ -50,7 +50,7 @@ static void HandleFrame(const AppProtocolFrame *frame)
         QueueRemoteCommand(frame);
     } else if ((frame->type == APP_MSG_MQTT_STATUS) &&
                (frame->length == 1U)) {
-        AppModel_SetMqttOnline(frame->payload[0] != 0U);
+        AppModel_SetNetworkProgress(frame->payload[0]);
     }
 }
 
@@ -93,7 +93,7 @@ void CommTask(void *argument)
 
     ESP8266_Init(115200U);
     AppProtocol_ParserInit(&parser);
-    AppModel_SetMqttOnline(false);
+    AppModel_SetNetworkProgress(0U);
     last_publish = xTaskGetTickCount();
     last_heartbeat = last_publish;
 
