@@ -12,7 +12,7 @@ flowchart LR
     STM --> OLED[OLED]
     STM <-->|USART2 115200| ESP[ESP8266]
     ESP <-->|Wi-Fi / MQTT| Broker[MQTT Broker]
-    Phone[手机 PWA 控制端] <-->|MQTT over WebSocket| Broker
+    Phone[Android APP / 手机 PWA] <-->|MQTT over WebSocket| Broker
 ```
 
 ## FreeRTOS 任务
@@ -62,6 +62,14 @@ A5 5A | Version | Type | Sequence | Flags | Length | Payload | CRC16
 本地预览时在 `mobile-dashboard` 目录启动静态 Web服务，再用浏览器访问；部署到
 HTTPS站点后可以添加到手机主屏幕。Broker地址和设备编号可在页面右上角修改。
 
+`android-app` 将同一套界面打包进原生 Android WebView。APK内部包含页面资源，
+启动后直接连接 MQTT Broker，运行时不需要电脑提供网页服务，也不依赖GitHub
+Pages。GitHub Actions会在相关代码更新后自动构建调试APK。
+
+- 测试版APK：[智能浇花 APP v1.0.0](https://github.com/a7linqi/smarthome-pcb/releases/tag/jiaohua-app-v1.0.0)
+- Android源码：`android-app`
+- 自动构建：`.github/workflows/build-android-apk.yml`
+
 ## 编译
 
 ### STM32
@@ -75,6 +83,12 @@ HTTPS站点后可以添加到手机主屏幕。Broker地址和设备编号可在
 1. Arduino IDE 安装 ESP8266 开发板支持和 `PubSubClient` 库。
 2. 打开 `firmware/esp8266/ESP8266_MQTT_Bridge/ESP8266_MQTT_Bridge.ino`。
 3. 选择实际 ESP8266 板型并编译、下载。
+
+### Android APP
+
+仓库推送 `android-app` 或 `mobile-dashboard` 相关改动后，GitHub Actions自动执行
+Android构建。构建成功后可以从Actions产物下载调试APK；打版本标签时会把APK
+发布到GitHub Releases，供手机直接下载安装。
 
 ## 本地配置
 
@@ -107,5 +121,7 @@ HTTPS站点后可以添加到手机主屏幕。Broker地址和设备编号可在
 - FreeRTOS固件、ESP8266串口桥、MQTT双向通信均已在实物上连通。
 - 已验证传感器上报、模式控制、温度/土壤阈值设置、ACK、Flash掉电保存、
   自动浇水判断和30秒水泵超时保护。
-- 手机控制端已连接实物数据并完成一条手动模式命令及ACK验证。
+- Android APP已在手机实测通过：实时传感器数据持续更新，自动/手动模式、
+  温度上限、土壤湿度下限和水泵开关命令均可下发并收到STM32 ACK。
+- APP运行时不依赖电脑；手机和ESP8266分别通过互联网连接同一个MQTT Broker。
 - DRV8833到货后仍需完成真实水泵带载测试。
