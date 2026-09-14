@@ -7,6 +7,7 @@
 #include "comm_task.h"
 #include "control_task.h"
 #include "display_task.h"
+#include "esp8266.h"
 #include "key_task.h"
 #include "sensor_task.h"
 #include "stmflash.h"
@@ -17,7 +18,7 @@ static void FatalError(void)
     for (;;) { }
 }
 
-void AppMain_Start(void)
+void AppMain_Start(bool network_enabled)
 {
     uint16_t temperature_high;
     uint16_t soil_low;
@@ -43,8 +44,13 @@ void AppMain_Start(void)
     if (xTaskCreate(SensorTask, "sensor", 256U, NULL, 3U, NULL) != pdPASS) {
         FatalError();
     }
-    if (xTaskCreate(CommTask, "comm", 384U, NULL, 3U, NULL) != pdPASS) {
-        FatalError();
+    if (network_enabled) {
+        if (xTaskCreate(CommTask, "comm", 384U, NULL, 3U, NULL) != pdPASS) {
+            FatalError();
+        }
+    } else {
+        ESP8266_Disable();
+        AppModel_SetMqttOnline(false);
     }
     if (xTaskCreate(KeyTask, "key", 192U, NULL, 2U, NULL) != pdPASS) {
         FatalError();

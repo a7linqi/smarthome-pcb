@@ -11,6 +11,17 @@ static volatile uint8_t rx_buffer[buf_len];
 static volatile uint16_t rx_count;
 static volatile uint16_t rx_previous_count;
 
+static void ESP8266_InitResetPin(void)
+{
+    GPIO_InitTypeDef gpio;
+
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+    gpio.GPIO_Pin = ESP_RST_PIN;
+    gpio.GPIO_Speed = GPIO_Speed_50MHz;
+    gpio.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(ESP_RST_PORT, &gpio);
+}
+
 void ESP8266_Init(uint32_t baud_rate)
 {
     GPIO_InitTypeDef gpio;
@@ -46,17 +57,19 @@ void ESP8266_Init(uint32_t baud_rate)
     USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
     USART_Cmd(USART2, ENABLE);
 
-    gpio.GPIO_Pin = ESP_RST_PIN;
-    gpio.GPIO_Speed = GPIO_Speed_50MHz;
-    gpio.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_Init(ESP_RST_PORT, &gpio);
-
+    ESP8266_InitResetPin();
     GPIO_ResetBits(ESP_RST_PORT, ESP_RST_PIN);
     delay_ms(200U);
     GPIO_SetBits(ESP_RST_PORT, ESP_RST_PIN);
 
     rx_count = 0U;
     rx_previous_count = 0U;
+}
+
+void ESP8266_Disable(void)
+{
+    ESP8266_InitResetPin();
+    GPIO_ResetBits(ESP_RST_PORT, ESP_RST_PIN);
 }
 
 void ESP8266_SendData(const uint8_t *data, uint16_t length)
