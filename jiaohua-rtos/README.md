@@ -64,13 +64,14 @@ A5 5A | Version | Type | Sequence | Flags | Length | Payload | CRC16
 ### ESP8266
 
 1. Arduino IDE 安装 ESP8266 开发板支持和 `PubSubClient` 库。
-2. 打开 `firmware/esp8266/ESP8266_MQTT_Bridge.ino`。
+2. 打开 `firmware/esp8266/ESP8266_MQTT_Bridge/ESP8266_MQTT_Bridge.ino`。
 3. 选择实际 ESP8266 板型并编译、下载。
 
 ## 本地配置
 
 真实 Wi-Fi 密码和云端密钥不会提交到 Git。复制
-`firmware/esp8266/bridge_config.example.h` 为 `bridge_config.h`，然后填写本地配置。
+`firmware/esp8266/ESP8266_MQTT_Bridge/bridge_config.example.h` 为
+`bridge_config.h`，然后填写本地配置。
 
 
 ## 上板前检查

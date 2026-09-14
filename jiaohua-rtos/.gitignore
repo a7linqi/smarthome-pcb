@@ -1,6 +1,6 @@
 # Local credentials
 firmware/stm32/HARDWARE/ESP8266/esp8266_config.h
-firmware/esp8266/bridge_config.h
+firmware/esp8266/ESP8266_MQTT_Bridge/bridge_config.h
 
 # Keil build products and local settings
 firmware/stm32/OBJ/
@@ -12,7 +12,7 @@ firmware/stm32/USER/Listings/
 firmware/stm32/USER/Objects/
 
 # Arduino local products
-firmware/esp8266/build/
+firmware/esp8266/ESP8266_MQTT_Bridge/build/
 
 # Legacy driver collection copied with the old project: keep it locally, but
 # publish only the drivers used by this watering controller.
@@ -40,4 +40,4 @@ firmware/stm32/keilkilll.bat
 
 # Keep credential rules last so the hardware allow-list cannot re-include them.
 firmware/stm32/HARDWARE/ESP8266/esp8266_config.h
-firmware/esp8266/bridge_config.h
+firmware/esp8266/ESP8266_MQTT_Bridge/bridge_config.h
