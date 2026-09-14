@@ -1,0 +1,166 @@
+:root {
+  color-scheme: light;
+  --forest: #115e46;
+  --green: #167a5b;
+  --mint: #dff5e9;
+  --paper: #f6f8f3;
+  --card: rgba(255, 255, 255, 0.93);
+  --ink: #17332a;
+  --muted: #6b7d76;
+  --line: rgba(17, 94, 70, 0.12);
+  --orange: #f19a4b;
+  --blue: #4098b7;
+  --danger: #c9534d;
+  --shadow: 0 18px 45px rgba(31, 68, 55, 0.11);
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 12% -5%, rgba(123, 204, 158, 0.3), transparent 28rem),
+    linear-gradient(180deg, #eef7f0 0, var(--paper) 32rem);
+}
+
+button, input { font: inherit; }
+button { cursor: pointer; }
+
+.app-shell {
+  width: min(100%, 720px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding-bottom: calc(30px + env(safe-area-inset-bottom));
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  min-height: 220px;
+  padding: calc(42px + env(safe-area-inset-top)) 24px 76px;
+  color: white;
+  background:
+    linear-gradient(135deg, rgba(13, 96, 69, 0.96), rgba(35, 139, 91, 0.88)),
+    url("assets/plant.png") right 16px bottom -38px / 190px no-repeat;
+  border-radius: 0 0 38px 38px;
+  box-shadow: var(--shadow);
+}
+
+.eyebrow {
+  margin: 0 0 7px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  opacity: 0.72;
+}
+
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 17px; font-size: clamp(30px, 8vw, 44px); letter-spacing: -0.04em; }
+h2 { margin-bottom: 0; font-size: 22px; }
+
+.connection-row { display: flex; align-items: center; gap: 9px; font-size: 14px; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; background: #f0b75a; box-shadow: 0 0 0 5px rgba(240, 183, 90, 0.18); }
+.status-dot.online { background: #88f2ae; box-shadow: 0 0 0 5px rgba(136, 242, 174, 0.18); }
+.status-dot.offline { background: #ff8b84; box-shadow: 0 0 0 5px rgba(255, 139, 132, 0.18); }
+
+.icon-button, .close-button {
+  border: 0;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 15px;
+  width: 44px;
+  height: 44px;
+  font-size: 22px;
+}
+
+main { margin-top: -48px; padding: 0 16px; position: relative; }
+
+.sensor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.sensor-card, .panel, .alarm-card {
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.sensor-card {
+  min-height: 126px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 15px;
+  border-radius: 24px;
+}
+
+.sensor-card.soil-card { grid-column: 1 / -1; }
+.sensor-card img { width: 55px; height: 55px; object-fit: contain; }
+.card-label { display: block; color: var(--muted); font-size: 13px; margin-bottom: 5px; }
+.sensor-card strong { display: block; font-size: clamp(29px, 8vw, 40px); line-height: 1; }
+.sensor-card strong small { font-size: 16px; margin-left: 3px; font-weight: 700; color: var(--muted); }
+.secondary-value { display: block; margin-top: 8px; color: var(--muted); font-size: 12px; }
+
+.panel { margin-top: 16px; padding: 22px 18px; border-radius: 28px; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.badge { padding: 8px 12px; border-radius: 999px; color: var(--green); background: var(--mint); font-size: 12px; font-weight: 800; }
+
+.segmented-control { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; padding: 5px; margin-top: 20px; background: #edf2ed; border-radius: 16px; }
+.segmented-control button, .field button, .secondary-button, .primary-button {
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 800;
+  color: var(--ink);
+  background: transparent;
+}
+.segmented-control button.active { color: white; background: var(--green); box-shadow: 0 8px 18px rgba(22, 122, 91, 0.22); }
+
+.control-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 22px 0; border-bottom: 1px solid var(--line); }
+.control-copy { display: flex; align-items: center; gap: 12px; }
+.control-copy img { width: 52px; height: 48px; object-fit: contain; }
+.control-copy strong { font-size: 20px; }
+.compact-actions { display: flex; gap: 7px; }
+.secondary-button { background: var(--mint); color: var(--green); }
+.secondary-button.danger { color: var(--danger); background: #fff0ee; }
+
+.threshold-grid { display: grid; gap: 13px; margin-top: 20px; }
+.field { display: grid; grid-template-columns: minmax(110px, 1fr) 110px 64px; align-items: center; gap: 9px; font-size: 14px; font-weight: 700; }
+.input-wrap { display: flex; align-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #f8faf7; }
+.input-wrap input { min-width: 0; width: 100%; padding: 11px 5px 11px 12px; border: 0; outline: 0; color: var(--ink); background: transparent; }
+.input-wrap b { padding-right: 10px; color: var(--muted); }
+.field button, .primary-button { color: white; background: var(--green); }
+
+.alarm-card { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 18px; border-radius: 24px; }
+.alarm-card img { width: 58px; height: 58px; object-fit: contain; }
+.alarm-card strong { display: block; font-size: 19px; }
+.alarm-card small { display: block; margin-top: 5px; color: var(--muted); }
+.alarm-card.warning { color: #803a31; background: #fff0e8; }
+
+.feedback { min-height: 44px; margin: 14px 2px 0; padding: 12px 15px; color: var(--muted); background: rgba(255,255,255,.65); border-radius: 14px; font-size: 13px; text-align: center; }
+.feedback.success { color: var(--green); background: var(--mint); }
+.feedback.error { color: var(--danger); background: #fff0ee; }
+
+dialog { width: min(calc(100% - 28px), 520px); padding: 0; color: var(--ink); background: white; border: 0; border-radius: 28px; box-shadow: 0 28px 80px rgba(16, 51, 39, .25); }
+dialog::backdrop { background: rgba(12, 37, 29, .48); backdrop-filter: blur(4px); }
+dialog form { padding: 24px; }
+.dialog-heading { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.close-button { color: var(--ink); background: #edf2ed; }
+dialog label { display: grid; gap: 7px; margin-top: 14px; font-size: 13px; font-weight: 800; }
+dialog input { width: 100%; padding: 13px; border: 1px solid var(--line); border-radius: 12px; outline-color: var(--green); }
+.settings-note { margin: 14px 0 20px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.primary-button { width: 100%; }
+
+@media (min-width: 620px) {
+  .sensor-grid { grid-template-columns: repeat(3, 1fr); }
+  .sensor-card.soil-card { grid-column: auto; }
+  .sensor-card { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 390px) {
+  .field { grid-template-columns: 1fr 90px 58px; gap: 6px; }
+  .field button { padding-inline: 8px; }
+  .compact-actions { flex-direction: column; }
+}

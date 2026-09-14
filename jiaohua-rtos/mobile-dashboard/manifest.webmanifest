@@ -1,0 +1,14 @@
+{
+  "name": "智能浇花系统",
+  "short_name": "智能浇花",
+  "description": "STM32 + ESP8266 智能浇花系统控制端",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6f8f3",
+  "theme_color": "#167a5b",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

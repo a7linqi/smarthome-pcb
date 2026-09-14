@@ -12,7 +12,7 @@ flowchart LR
     STM --> OLED[OLED]
     STM <-->|USART2 115200| ESP[ESP8266]
     ESP <-->|Wi-Fi / MQTT| Broker[MQTT Broker]
-    Phone[手机或 MQTT 客户端] <-->|发布与订阅| Broker
+    Phone[手机 PWA 控制端] <-->|MQTT over WebSocket| Broker
 ```
 
 ## FreeRTOS 任务
@@ -41,7 +41,7 @@ A5 5A | Version | Type | Sequence | Flags | Length | Payload | CRC16
 | `0x10` | STM32 → ESP8266 | 温度、湿度、土壤湿度、ADC、模式、水泵、报警 |
 | `0x20` | ESP8266 → STM32 | 控制命令和参数 |
 | `0x21` | STM32 → ESP8266 | 命令执行结果与实际值 |
-| `0x30` | ESP8266 → STM32 | MQTT 在线状态 |
+| `0x30` | ESP8266 → STM32 | 联网进度：0、30、50、90、100% |
 
 接收端逐字节寻找帧头，根据 `Length` 等待完整数据，并用 CRC-16/CCITT 检查传输完整性。
 
@@ -52,6 +52,15 @@ A5 5A | Version | Type | Sequence | Flags | Length | Payload | CRC16
 - ESP8266 每 5 秒尝试一次 MQTT 重连，并通过 `0x30` 二进制帧向 STM32 报告在线状态。
 - 公共 Broker 默认主题为 `jiaohua/<设备命名空间>/data` 和 `jiaohua/<设备命名空间>/control`。
 - 遥测主题使用 JSON；控制主题使用简短文本命令；应答发布到 `jiaohua/<设备命名空间>/ack`。
+
+## 手机控制端
+
+`mobile-dashboard` 是适配手机屏幕的 PWA控制端，通过 MQTT over WebSocket
+直接连接 Broker。页面支持实时数据显示、设备在线判断、自动/手动模式切换、
+水泵控制、阈值设置、报警显示和控制ACK反馈。
+
+本地预览时在 `mobile-dashboard` 目录启动静态 Web服务，再用浏览器访问；部署到
+HTTPS站点后可以添加到手机主屏幕。Broker地址和设备编号可在页面右上角修改。
 
 ## 编译
 
@@ -95,5 +104,8 @@ A5 5A | Version | Type | Sequence | Flags | Length | Payload | CRC16
 ## 当前验证状态
 
 - STM32 Keil ARMCC5：已通过完整构建，0 errors、0 warnings。
-- MQTT 桥的基础版本曾在实物上连通；本次重连与状态上报改动需要重新烧录 ESP8266 做联合验证。
-- FreeRTOS 版本尚未烧录到实物，因此不能把“编译通过”等同于“整机完成”。
+- FreeRTOS固件、ESP8266串口桥、MQTT双向通信均已在实物上连通。
+- 已验证传感器上报、模式控制、温度/土壤阈值设置、ACK、Flash掉电保存、
+  自动浇水判断和30秒水泵超时保护。
+- 手机控制端已连接实物数据并完成一条手动模式命令及ACK验证。
+- DRV8833到货后仍需完成真实水泵带载测试。
