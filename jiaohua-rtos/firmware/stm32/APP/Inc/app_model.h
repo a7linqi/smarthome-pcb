@@ -36,6 +36,7 @@ typedef struct {
     uint16_t temperature_high;
     uint16_t soil_low;
     bool pump_on;
+    bool network_enabled;
     bool mqtt_online;
     uint8_t ui_page;
     uint8_t ui_selection;
@@ -75,6 +76,7 @@ bool AppModel_Init(void);
 void AppModel_GetSnapshot(AppSnapshot *snapshot);
 void AppModel_UpdateSensor(const SensorSnapshot *sensor);
 void AppModel_UpdateRuntime(AppMode mode, AppAlarm alarm, bool pump_on);
+void AppModel_SetNetworkEnabled(bool enabled);
 void AppModel_SetMqttOnline(bool online);
 void AppModel_SetUi(uint8_t page, uint8_t selection);
 void AppModel_SetSettings(uint16_t temperature_high, uint16_t soil_low);

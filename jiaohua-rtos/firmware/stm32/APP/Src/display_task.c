@@ -22,6 +22,9 @@ static void ShowDataPage(const AppSnapshot *snapshot)
     const char *mode = snapshot->mode == APP_MODE_AUTO
                            ? TEXT_AUTO
                            : TEXT_MANUAL;
+    const char *network_status = !snapshot->network_enabled
+                                     ? "NO"
+                                     : (snapshot->mqtt_online ? "OK" : "--");
 
     if (snapshot->sensor.dht11_valid) {
         sprintf(line, "\xCE\xC2\xB6\xC8:%u\xA1\xE6 %s ",
@@ -42,9 +45,9 @@ static void ShowDataPage(const AppSnapshot *snapshot)
             snapshot->sensor.soil_percent);
     OLED_ShowText(0U, 4U, (u8 *)line, 0U);
 
-    sprintf(line, "\xCB\xAE\xB1\xC3:%s MQTT:%s",
+    sprintf(line, "\xCB\xAE\xB1\xC3:%s \xC1\xAA\xCD\xF8:%s",
             snapshot->pump_on ? "ON " : "OFF",
-            snapshot->mqtt_online ? "OK" : "--");
+            network_status);
     OLED_ShowText(0U, 6U, (u8 *)line, 0U);
 }
 

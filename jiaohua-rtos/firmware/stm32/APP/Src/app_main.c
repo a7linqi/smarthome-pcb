@@ -37,6 +37,7 @@ void AppMain_Start(bool network_enabled)
         soil_low = 40U;
     }
     AppModel_SetSettings(temperature_high, soil_low);
+    AppModel_SetNetworkEnabled(network_enabled);
 
     if (xTaskCreate(ControlTask, "control", 256U, NULL, 4U, NULL) != pdPASS) {
         FatalError();

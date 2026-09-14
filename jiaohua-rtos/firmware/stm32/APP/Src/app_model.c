@@ -58,6 +58,14 @@ void AppModel_UpdateRuntime(AppMode mode, AppAlarm alarm, bool pump_on)
     }
 }
 
+void AppModel_SetNetworkEnabled(bool enabled)
+{
+    if (xSemaphoreTake(app_mutex, portMAX_DELAY) == pdTRUE) {
+        app_snapshot.network_enabled = enabled;
+        xSemaphoreGive(app_mutex);
+    }
+}
+
 void AppModel_SetMqttOnline(bool online)
 {
     if (xSemaphoreTake(app_mutex, portMAX_DELAY) == pdTRUE) {
