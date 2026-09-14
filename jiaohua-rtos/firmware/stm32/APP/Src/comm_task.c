@@ -80,7 +80,8 @@ void CommTask(void *argument)
     (void)argument;
 
     ESP8266_Init(115200U);
-    AppModel_SetMqttOnline(false);
+    /* ESP8266_Init returns only after Wi-Fi, MQTT and subscription succeed. */
+    AppModel_SetMqttOnline(true);
     last_publish = xTaskGetTickCount();
 
     for (;;) {
